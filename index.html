@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Palantir Lite - Crisis Dashboard</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=20260511-3">
+</head>
+<body>
+
+    <header class="header">
+        <div>
+            <h1>WOT - What's Out There</h1>
+            <p>Dashboard locale per il monitoraggio di crisi internazionali</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="panel world-map-panel">
+            <div class="panel-header map-panel-header">
+                <div>
+                    <h2>World Risk Map</h2>
+                    <p class="panel-subtitle">Paesi in pericolo rilevati dagli eventi registrati</p>
+                </div>
+
+                <div class="map-legend" aria-label="Legenda rischio">
+                    <span><i class="map-swatch risk-low"></i>Basso</span>
+                    <span><i class="map-swatch risk-medium"></i>Medio</span>
+                    <span><i class="map-swatch risk-high"></i>Alto</span>
+                    <span><i class="map-swatch risk-critical"></i>Critico</span>
+                </div>
+            </div>
+
+            <div class="world-map-layout">
+                <div class="world-map-frame">
+                    <div class="world-map-controls" aria-label="Controlli zoom mappa">
+                        <button type="button" id="worldMapZoomOut" title="Riduci zoom">-</button>
+                        <span id="worldMapZoomValue">100%</span>
+                        <button type="button" id="worldMapZoomIn" title="Aumenta zoom">+</button>
+                        <button type="button" id="worldMapZoomReset" title="Reimposta zoom">Reset</button>
+                    </div>
+
+                    <div id="worldMapCanvas" class="world-map-canvas">
+                        <object id="worldRiskMap" type="image/svg+xml" data="assets/maps/world.svg?v=20260511-3" aria-label="Mappa mondiale dei rischi"></object>
+                    </div>
+                    <div id="worldMapTooltip" class="world-map-tooltip" role="tooltip"></div>
+                </div>
+
+                <aside class="world-risk-summary">
+                    <h3>Paesi evidenziati</h3>
+                    <div id="worldRiskList" class="world-risk-list">
+                        <p class="muted">Caricamento dati rischio...</p>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Eventi registrati</h2>
+
+                <select id="filtroTipologia">
+                    <option value="tutti">Tutti</option>
+                    <option value="militare">Militare</option>
+                    <option value="cyber">Cyber</option>
+                    <option value="diplomatica">Diplomatica</option>
+                    <option value="umanitaria">Umanitaria</option>
+                </select>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Data</th>
+                        <th>Luogo</th>
+                        <th>Tipologia</th>
+                        <th>Vittime/Danni</th>
+                        <th>Gravità</th>
+                        <th>Paesi coinvolti</th>
+                        <th>Fonte</th>
+                    </tr>
+                </thead>
+                <tbody id="tabellaEventi">
+                    <!-- Eventi caricati da JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Cyberattacchi registrati</h2>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Evento</th>
+                        <th>Luogo</th>
+                        <th>Bersaglio</th>
+                        <th>Impatto</th>
+                        <th>Metodo</th>
+                    </tr>
+                </thead>
+                <tbody id="tabellaCyberattacchi">
+                    <!-- Cyberattacchi caricati da JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Interventi umanitari</h2>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Organizzazione</th>
+                        <th>Tipo</th>
+                        <th>Data</th>
+                        <th>Area</th>
+                        <th>Evento collegato</th>
+                    </tr>
+                </thead>
+                <tbody id="tabellaInterventi">
+                    <!-- Interventi caricati da JavaScript -->
+                </tbody>
+            </table>
+        </section>
+
+        <section class="cards">
+            <div class="card">
+                <h3>Eventi Totali</h3>
+                <p id="totaleEventi">0</p>
+            </div>
+
+            <div class="card">
+                <h3>Cyberattacchi</h3>
+                <p id="totaleCyber">0</p>
+            </div>
+
+            <div class="card">
+                <h3>Interventi</h3>
+                <p id="totaleInterventi">0</p>
+            </div>
+
+            <div class="card">
+                <h3>Eventi Critici</h3>
+                <p id="totaleCritici">0</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>REST Countries API - Ricerca Paese</h2>
+            </div>
+
+            <div class="api-search-box">
+                <input
+                    type="text"
+                    id="countrySearchInput"
+                    placeholder="Cerca un Paese es. Croatia, Italy, Iran, Israel..."
+                >
+
+                <button id="countrySearchBtn">
+                    Cerca
+                </button>
+            </div>
+
+            <div id="apiPaesiDemo" class="api-paesi-demo">
+                <!-- Risultati REST Countries -->
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>ReliefWeb API - Report umanitari - ESEMPIO di FALLBACK OFFLINE</h2>
+            </div>
+
+            <div class="api-search-box">
+                <input
+                    type="text"
+                    id="reliefSearchInput"
+                    placeholder="Cerca crisi o Paese es. Syria, Lebanon, Gaza, Iran..."
+                >
+
+                <button id="reliefSearchBtn">
+                    Cerca Report
+                </button>
+            </div>
+
+            <div class="api-search-samples">
+                <span>Prova con:</span>
+                <button type="button" class="sample-btn" data-query="Gaza">GAZA</button>
+                <button type="button" class="sample-btn" data-query="Ukraine">Ucraina</button>
+                <button type="button" class="sample-btn" data-query="Iran">Iran</button>
+            </div>
+
+            <div id="reliefReportsBox" class="relief-reports-box">
+                <!-- Report caricati da ReliefWeb -->
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Cyber Knowledge Base</h2>
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">Metodi di attacco e contromisure</p>
+            </div>
+
+            <div id="cyberKnowledgeBox" class="cyber-knowledge-box">
+                <!-- Knowledge base caricata da JavaScript -->
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>MITRE ATT&CK API - Cyber Techniques</h2>
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">Tecniche e tattiche con integrazione TAXII API</p>
+            </div>
+
+            <div id="mitreTechniquesBox" class="mitre-techniques-box">
+                <!-- Tecniche MITRE caricate da JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/app.js?v=20260511-4"></script>
+</body>
+</html>

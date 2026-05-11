@@ -1,0 +1,36 @@
+<?php
+
+header("Content-Type: application/json; charset=UTF-8");
+
+require_once "db.php";
+
+try {
+    $sql = "
+        SELECT 
+            c.idCyberattacco,
+            c.idEvento,
+            e.luogo,
+            e.dataEvento,
+            e.livelloGravita,
+            c.tipoBersaglio,
+            c.livelloImpatto,
+            c.metodoAttacco
+        FROM cyberattacco c
+        INNER JOIN evento e ON c.idEvento = e.idEvento
+        ORDER BY c.idCyberattacco ASC
+    ";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+
+    $cyberattacchi = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode($cyberattacchi, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo json_encode([
+        "errore" => "Errore nel recupero dei cyberattacchi",
+        "dettaglio" => $e->getMessage()
+    ]);
+}
