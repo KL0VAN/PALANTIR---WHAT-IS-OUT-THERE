@@ -371,6 +371,173 @@ select {
     border-radius: 8px;
 }
 
+.panel-action-btn {
+    background: #38bdf8;
+    color: #020617;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.panel-action-btn:hover {
+    background: #0ea5e9;
+}
+
+.panel-action-btn:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.ai-analysis-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 20px;
+    border-bottom: 1px solid #1e293b;
+}
+
+.ai-analysis-form textarea {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+    background: #020617;
+    color: #e5e7eb;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.ai-analysis-form textarea::placeholder {
+    color: #64748b;
+}
+
+.ai-analysis-box {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 20px;
+}
+
+.ai-analysis-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.ai-mode-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.ai-status-live {
+    background: rgba(34, 197, 94, 0.14);
+    border: 1px solid #15803d;
+    color: #86efac;
+}
+
+.ai-status-error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #991b1b;
+    color: #fecaca;
+}
+
+.ai-analysis-result {
+    background: #020617;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.ai-analysis-result h3 {
+    color: #f8fafc;
+    font-size: 15px;
+    margin-bottom: 10px;
+}
+
+.ai-analysis-result p {
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.openrouter-box {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 20px;
+}
+
+.openrouter-status {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.openrouter-mode-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.openrouter-status-live {
+    background: rgba(34, 197, 94, 0.14);
+    border: 1px solid #15803d;
+    color: #86efac;
+}
+
+.openrouter-status-config {
+    background: rgba(250, 204, 21, 0.14);
+    border: 1px solid #854d0e;
+    color: #fde68a;
+}
+
+.openrouter-status-error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #991b1b;
+    color: #fecaca;
+}
+
+.openrouter-result {
+    background: #020617;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.openrouter-result h3 {
+    color: #f8fafc;
+    font-size: 15px;
+    margin-bottom: 10px;
+}
+
+.openrouter-result p {
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 8px;
+}
+
+.openrouter-result strong {
+    color: #cbd5e1;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -596,6 +763,42 @@ td {
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 16px;
     padding: 20px;
+}
+
+.relief-status {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.relief-status p {
+    flex-basis: 100%;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.relief-mode-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.relief-status-live {
+    background: rgba(34, 197, 94, 0.14);
+    border: 1px solid #15803d;
+    color: #86efac;
+}
+
+.relief-status-fallback {
+    background: rgba(148, 163, 184, 0.16);
+    border: 1px solid #475569;
+    color: #cbd5e1;
 }
 
 .relief-report-card {
@@ -1074,5 +1277,9 @@ td {
     .world-map-controls button {
         min-width: 30px;
         padding: 0 8px;
+    }
+
+    .ai-analysis-form {
+        grid-template-columns: 1fr;
     }
 }

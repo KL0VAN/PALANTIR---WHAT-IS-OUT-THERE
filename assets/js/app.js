@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
     inizializzaReliefWeb();
     caricaReportReliefWeb("Syria");
 
+    inizializzaAiAnalysis();
+
     caricaCyberKnowledge();
 
     caricaMitreAttack();
@@ -58,12 +60,106 @@ async function caricaCoinvolgimenti() {
     }
 }
 
-function fetchConTimeout(url, timeout = 6000) {
+function fetchConTimeout(url, timeout = 6000, options = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
-    return fetch(url, { signal: controller.signal })
+    return fetch(url, { ...options, signal: controller.signal })
         .finally(() => clearTimeout(timer));
+}
+
+function inizializzaAiAnalysis() {
+    const input = document.getElementById("aiPromptInput");
+    const bottone = document.getElementById("aiAnalyzeBtn");
+
+    if (!input || !bottone) {
+        return;
+    }
+
+    bottone.addEventListener("click", analizzaCrisi);
+}
+
+async function analizzaCrisi() {
+    const input = document.getElementById("aiPromptInput");
+    const contenitore = document.getElementById("aiAnalysisBox");
+    const bottone = document.getElementById("aiAnalyzeBtn");
+
+    if (!input || !contenitore || !bottone) {
+        return;
+    }
+
+    const prompt = input.value.trim();
+
+    if (prompt.length === 0) {
+        contenitore.innerHTML = `<p class="muted">Inserisci una crisi geopolitica o cyber da analizzare.</p>`;
+        return;
+    }
+
+    bottone.disabled = true;
+    bottone.textContent = "Analisi...";
+
+    contenitore.innerHTML = `
+        <p class="muted">Analisi AI in corso...</p>
+    `;
+
+    try {
+        const risposta = await fetchConTimeout("api/get_ai_analysis.php", 100000, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ prompt })
+        });
+
+        if (!risposta.ok) {
+            throw new Error(`Errore endpoint AI: ${risposta.status}`);
+        }
+
+        const data = await risposta.json();
+        mostraAnalisiCrisi(data);
+    } catch (errore) {
+        console.error("Errore AI Crisis Analysis:", errore);
+        contenitore.innerHTML = `
+            <p class="muted">${escapeHtml(errore.message || "Impossibile generare l'analisi AI.")}</p>
+        `;
+    } finally {
+        bottone.disabled = false;
+        bottone.textContent = "Analizza";
+    }
+}
+
+function mostraAnalisiCrisi(data) {
+    const contenitore = document.getElementById("aiAnalysisBox");
+
+    if (!contenitore) {
+        return;
+    }
+
+    if (!data.success) {
+        contenitore.innerHTML = `
+            <div class="ai-analysis-status">
+                <span class="ai-mode-badge ai-status-error">ERRORE AI</span>
+                <span>${escapeHtml(data.errore || "Errore non specificato.")}</span>
+            </div>
+        `;
+        return;
+    }
+
+    contenitore.innerHTML = `
+        <div class="ai-analysis-status">
+            <span class="ai-mode-badge ai-status-live">LIVE - OpenRouter API</span>
+            <span>HTTP ${escapeHtml(data.http_code || 200)}</span>
+        </div>
+
+        <div class="ai-analysis-result">
+            <h3>Analisi</h3>
+            <p>${formattaRispostaAi(data.risposta_ai)}</p>
+        </div>
+    `;
+}
+
+function formattaRispostaAi(testo) {
+    return escapeHtml(testo || "N/D").replace(/\n/g, "<br>");
 }
 
 async function caricaEventi() {
@@ -424,54 +520,52 @@ async function caricaReportReliefWeb(ricerca) {
         <p class="muted">Richiedo report umanitari a ReliefWeb...</p>
     `;
 
-    const url = `https://api.reliefweb.int/v2/reports?appname=palantir-lite-school-project&limit=5&preset=latest&query[value]=${encodeURIComponent(ricerca)}&fields[include][]=title&fields[include][]=date.created&fields[include][]=source.name&fields[include][]=country.name&fields[include][]=url`;
+    const url = `api/get_reliefweb.php?q=${encodeURIComponent(ricerca)}`;
 
     try {
-        const risposta = await fetch(url);
+        const risposta = await fetchConTimeout(url, 12000);
 
         if (!risposta.ok) {
-            const messaggio = `Errore ReliefWeb: ${risposta.status} ${risposta.statusText}`;
+            const messaggio = `Errore endpoint ReliefWeb: ${risposta.status} ${risposta.statusText}`;
             throw new Error(messaggio);
         }
 
         const data = await risposta.json();
 
-        if (!Array.isArray(data)) {
-            throw new Error("Risposta inattesa da ReliefWeb");
-        }
-
-        if (data.length === 0) {
-            mostraErroreReliefWeb(`Nessun report trovato per '${ricerca}'. Prova con Gaza, Ucraina o Iran.`);
-            return;
+        if (!data || !Array.isArray(data.reports)) {
+            throw new Error("Risposta inattesa dall'endpoint ReliefWeb");
         }
 
         mostraReportReliefWeb(data);
 
     } catch (errore) {
         console.error("Errore ReliefWeb:", errore);
-        const fallback = fallbackReportsFor(ricerca);
-        if (fallback) {
-            mostraReportReliefWeb(fallback, `Esempio offline per ${ricerca}. La chiamata a ReliefWeb non è disponibile al momento.`);
-            return;
-        }
         mostraErroreReliefWeb(errore.message || "Impossibile caricare i report ReliefWeb.");
     }
 }
 
-function mostraReportReliefWeb(reports, nota) {
+function mostraReportReliefWeb(payload) {
     const contenitore = document.getElementById("reliefReportsBox");
-    contenitore.innerHTML = "";
+    const reports = payload.reports || [];
+    const modalita = payload.modalita === "live" ? "live" : "fallback";
+    const badgeLabel = modalita === "live" ? "LIVE - ReliefWeb API" : "FALLBACK OFFLINE";
+    const badgeClass = modalita === "live" ? "relief-status-live" : "relief-status-fallback";
 
-    if (nota) {
-        contenitore.innerHTML = `
-            <p class="muted">${nota}</p>
-        `;
-    }
+    contenitore.innerHTML = "";
 
     if (!reports || reports.length === 0) {
         mostraErroreReliefWeb("Nessun report trovato.");
         return;
     }
+
+    const status = document.createElement("div");
+    status.classList.add("relief-status");
+    status.innerHTML = `
+        <span class="relief-mode-badge ${badgeClass}">${badgeLabel}</span>
+        <span>${escapeHtml(payload.fonte || "Fonte non disponibile")}</span>
+        ${payload.motivoFallback ? `<p>${escapeHtml(payload.motivoFallback)}</p>` : ""}
+    `;
+    contenitore.appendChild(status);
 
     reports.forEach(report => {
         const card = document.createElement("div");
@@ -482,11 +576,11 @@ function mostraReportReliefWeb(reports, nota) {
             : "N/D";
 
         card.innerHTML = `
-            <h3>${report.titolo}</h3>
-            <p><strong>Paese:</strong> ${report.paese}</p>
-            <p><strong>Fonte:</strong> ${report.fonte}</p>
+            <h3>${escapeHtml(report.titolo)}</h3>
+            <p><strong>Paese:</strong> ${escapeHtml(report.paese)}</p>
+            <p><strong>Fonte:</strong> ${escapeHtml(report.fonte)}</p>
             <p><strong>Data:</strong> ${dataPulita}</p>
-            ${report.url ? `<a href="${report.url}" target="_blank">Apri report</a>` : ""}
+            ${report.url ? `<a href="${escapeHtml(report.url)}" target="_blank" rel="noopener">Apri report</a>` : ""}
         `;
 
         contenitore.appendChild(card);

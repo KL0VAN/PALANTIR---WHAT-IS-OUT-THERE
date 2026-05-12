@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Palantir Lite - Crisis Dashboard</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=20260511-3">
+    <link rel="stylesheet" href="assets/css/style.css?v=20260511-5">
 </head>
 <body>
 
@@ -51,6 +51,31 @@
                         <p class="muted">Caricamento dati rischio...</p>
                     </div>
                 </aside>
+            </div>
+        </section>
+
+        <section class="panel ai-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>AI Crisis Analysis</h2>
+                    <p class="panel-subtitle">Analisi sintetica di crisi geopolitiche, cyber e umanitarie tramite OpenRouter</p>
+                </div>
+            </div>
+
+            <div class="ai-analysis-form">
+                <textarea
+                    id="aiPromptInput"
+                    placeholder="Analyze the geopolitical crisis in Iran"
+                    rows="4"
+                ></textarea>
+
+                <button type="button" id="aiAnalyzeBtn" class="panel-action-btn">
+                    Analizza
+                </button>
+            </div>
+
+            <div id="aiAnalysisBox" class="ai-analysis-box">
+                <p class="muted">Inserisci un prompt per generare un'analisi di crisi.</p>
             </div>
         </section>
 
@@ -226,6 +251,6 @@
         </section>
     </main>
 
-    <script src="assets/js/app.js?v=20260511-4"></script>
+    <script src="assets/js/app.js?v=20260511-6"></script>
 </body>
 </html>
