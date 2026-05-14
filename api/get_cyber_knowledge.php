@@ -2,6 +2,9 @@
 
 header("Content-Type: application/json; charset=UTF-8");
 
+require_once "fallback_data.php";
+$conn = connessioneDbLocaleSeDisponibile();
+
 $knowledge_base = [
     "ransomware" => [
         "categoria" => "Malware",
@@ -123,7 +126,9 @@ $knowledge_base = [
 ];
 
 try {
-    require_once "db.php";
+    if (!$conn instanceof PDO) {
+        outputJson(creaCyberKnowledgeDaRows(fallbackCyberattacchi(), $knowledge_base));
+    }
 
     $query = "
         SELECT 
@@ -146,12 +151,22 @@ try {
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $risultati = creaCyberKnowledgeDaRows($rows, $knowledge_base);
+
+    echo json_encode($risultati, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+} catch (Throwable $e) {
+    outputJson(creaCyberKnowledgeDaRows(fallbackCyberattacchi(), $knowledge_base));
+}
+
+function creaCyberKnowledgeDaRows(array $rows, array $knowledge_base) {
     $risultati = [];
 
     foreach ($rows as $row) {
-        $metodo_lower = strtolower(str_replace(" ", "_", $row['metodoAttacco']));
+        $metodoLower = strtolower(str_replace(" ", "_", $row["metodoAttacco"]));
+        $metodoSpazi = strtolower(trim($row["metodoAttacco"]));
 
-        $knowledge = $knowledge_base[$metodo_lower] ?? [
+        $knowledge = $knowledge_base[$metodoLower] ?? $knowledge_base[$metodoSpazi] ?? [
             "categoria" => "Categoria non definita",
             "descrizioneMetodo" => "Nessuna descrizione disponibile per questo metodo di attacco.",
             "rischioTecnico" => "Sconosciuto",
@@ -160,28 +175,20 @@ try {
         ];
 
         $risultati[] = [
-            "idCyberattacco" => $row['idCyberattacco'],
-            "idEvento" => $row['idEvento'],
-            "luogo" => $row['luogo'],
-            "dataEvento" => $row['dataEvento'],
-            "tipoBersaglio" => $row['tipoBersaglio'],
-            "livelloImpatto" => $row['livelloImpatto'],
-            "metodoAttacco" => $row['metodoAttacco'],
-            "categoria" => $knowledge['categoria'],
-            "descrizioneMetodo" => $knowledge['descrizioneMetodo'],
-            "rischioTecnico" => $knowledge['rischioTecnico'],
-            "esempio" => $knowledge['esempio'],
-            "contromisure" => $knowledge['contromisure']
+            "idCyberattacco" => $row["idCyberattacco"],
+            "idEvento" => $row["idEvento"],
+            "luogo" => $row["luogo"],
+            "dataEvento" => $row["dataEvento"],
+            "tipoBersaglio" => $row["tipoBersaglio"],
+            "livelloImpatto" => $row["livelloImpatto"],
+            "metodoAttacco" => $row["metodoAttacco"],
+            "categoria" => $knowledge["categoria"],
+            "descrizioneMetodo" => $knowledge["descrizioneMetodo"],
+            "rischioTecnico" => $knowledge["rischioTecnico"],
+            "esempio" => $knowledge["esempio"],
+            "contromisure" => $knowledge["contromisure"]
         ];
     }
 
-    echo json_encode($risultati, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-
-} catch (PDOException $e) {
-    http_response_code(500);
-
-    echo json_encode([
-        "errore" => "Errore nel recupero della knowledge base",
-        "dettaglio" => $e->getMessage()
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    return $risultati;
 }

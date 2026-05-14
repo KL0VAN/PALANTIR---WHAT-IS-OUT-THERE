@@ -2,9 +2,14 @@
 
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "db.php";
+require_once "fallback_data.php";
+$conn = connessioneDbLocaleSeDisponibile();
 
 try {
+    if (!$conn instanceof PDO) {
+        outputJson(fallbackCoinvolgimenti());
+    }
+
     $tabellaPaesi = trovaTabellaPaesi($conn);
     $colonnePaese = colonneTabella($conn, $tabellaPaesi);
 
@@ -61,12 +66,15 @@ try {
     echo json_encode($coinvolgimenti, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
 } catch (Throwable $e) {
-    http_response_code(500);
+    if ($conn instanceof PDO) {
+        $coinvolgimenti = caricaCoinvolgimentiConPaesiFallback($conn);
 
-    echo json_encode([
-        "errore" => "Errore nel recupero dei coinvolgimenti",
-        "dettaglio" => $e->getMessage()
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if (count($coinvolgimenti) > 0) {
+            outputJson($coinvolgimenti);
+        }
+    }
+
+    outputJson(fallbackCoinvolgimenti());
 }
 
 function trovaTabellaPaesi(PDO $conn) {
@@ -125,4 +133,45 @@ function colonnaSql($colonna, $alias) {
 
 function quoteIdentificatore($identificatore) {
     return "`" . str_replace("`", "``", $identificatore) . "`";
+}
+
+function caricaCoinvolgimentiConPaesiFallback(PDO $conn) {
+    try {
+        $stmt = $conn->prepare("
+            SELECT
+                idEvento,
+                idPaese,
+                ruoloNelEvento
+            FROM coinvolgimento
+            ORDER BY idEvento ASC, idPaese ASC
+        ");
+        $stmt->execute();
+
+        $coinvolgimenti = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $paesiFallback = fallbackPaesiPerId();
+
+        foreach ($coinvolgimenti as &$coinvolgimento) {
+            $idPaese = (int) $coinvolgimento["idPaese"];
+            $paese = $paesiFallback[$idPaese] ?? null;
+
+            if ($paese === null) {
+                $coinvolgimento["nomePaese"] = "Paese non trovato";
+                $coinvolgimento["codicePaese"] = null;
+                $coinvolgimento["areaGeografica"] = null;
+                $coinvolgimento["alleanza"] = null;
+                $coinvolgimento["ruoloConflitto"] = null;
+                continue;
+            }
+
+            $coinvolgimento["nomePaese"] = $paese["nomePaese"];
+            $coinvolgimento["codicePaese"] = $paese["codicePaese"];
+            $coinvolgimento["areaGeografica"] = $paese["areaGeografica"];
+            $coinvolgimento["alleanza"] = $paese["alleanza"];
+            $coinvolgimento["ruoloConflitto"] = $paese["ruoloConflitto"];
+        }
+
+        return $coinvolgimenti;
+    } catch (Throwable $e) {
+        return [];
+    }
 }

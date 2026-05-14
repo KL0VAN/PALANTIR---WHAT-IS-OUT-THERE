@@ -2,9 +2,14 @@
 
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "db.php";
+require_once "fallback_data.php";
+$conn = connessioneDbLocaleSeDisponibile();
 
 try {
+    if (!$conn instanceof PDO) {
+        outputJson(fallbackCyberattacchi());
+    }
+
     $sql = "
         SELECT 
             c.idCyberattacco,
@@ -27,10 +32,6 @@ try {
 
     echo json_encode($cyberattacchi, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode([
-        "errore" => "Errore nel recupero dei cyberattacchi",
-        "dettaglio" => $e->getMessage()
-    ]);
+} catch (Throwable $e) {
+    outputJson(fallbackCyberattacchi());
 }

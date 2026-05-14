@@ -2,9 +2,14 @@
 
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "db.php";
+require_once "fallback_data.php";
+$conn = connessioneDbLocaleSeDisponibile();
 
 try {
+    if (!$conn instanceof PDO) {
+        outputJson(fallbackStatistiche());
+    }
+
     $statistiche = [];
 
     $sqlEventi = "SELECT COUNT(*) AS totale FROM evento";
@@ -21,10 +26,6 @@ try {
 
     echo json_encode($statistiche, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode([
-        "errore" => "Errore nel recupero delle statistiche",
-        "dettaglio" => $e->getMessage()
-    ]);
+} catch (Throwable $e) {
+    outputJson(fallbackStatistiche());
 }
