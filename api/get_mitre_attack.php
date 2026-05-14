@@ -2,7 +2,8 @@
 
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "db.php";
+require_once "fallback_data.php";
+$conn = connessioneDbLocaleSeDisponibile();
 
 $mitreCollectionId = "x-mitre-collection--1f5f1533-f617-4ca8-9ab4-6a02367fa019";
 $mitreBaseUrl = "https://attack-taxii.mitre.org/api/v21";
@@ -160,25 +161,30 @@ function normalizzaTecnicaMitre($oggettoMitre, $fallbackTecnica) {
 }
 
 try {
-    $sql = "
-        SELECT
-            c.idCyberattacco,
-            c.idEvento,
-            c.tipoBersaglio,
-            c.livelloImpatto,
-            c.metodoAttacco,
-            e.luogo,
-            e.dataEvento,
-            e.livelloGravita
-        FROM cyberattacco c
-        INNER JOIN evento e ON c.idEvento = e.idEvento
-        ORDER BY e.dataEvento DESC
-    ";
+    if ($conn instanceof PDO) {
+        $sql = "
+            SELECT
+                c.idCyberattacco,
+                c.idEvento,
+                c.tipoBersaglio,
+                c.livelloImpatto,
+                c.metodoAttacco,
+                e.luogo,
+                e.dataEvento,
+                e.livelloGravita
+            FROM cyberattacco c
+            INNER JOIN evento e ON c.idEvento = e.idEvento
+            ORDER BY e.dataEvento DESC
+        ";
 
-    $stmt = $conn->prepare($sql);
-    $stmt->execute();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
 
-    $cyberattacchi = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $cyberattacchi = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $cyberattacchi = fallbackCyberattacchi();
+    }
+
     $risultati = [];
     $cacheMitre = [];
 
@@ -220,11 +226,35 @@ try {
 
     echo json_encode($risultati, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-} catch (PDOException $e) {
-    http_response_code(500);
+} catch (Throwable $e) {
+    outputJson(creaMitreFallback($fallback));
+}
 
-    echo json_encode([
-        "errore" => "Errore nel recupero dati MITRE ATT&CK",
-        "dettaglio" => $e->getMessage()
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+function creaMitreFallback(array $fallback) {
+    $risultati = [];
+
+    foreach (fallbackCyberattacchi() as $cyberattacco) {
+        $metodo = normalizzaMetodo($cyberattacco["metodoAttacco"]);
+        $tecnica = getFallbackTecnica($metodo, $fallback);
+
+        $risultati[] = [
+            "idCyberattacco" => $cyberattacco["idCyberattacco"],
+            "idEvento" => $cyberattacco["idEvento"],
+            "luogo" => $cyberattacco["luogo"],
+            "dataEvento" => $cyberattacco["dataEvento"],
+            "livelloGravita" => $cyberattacco["livelloGravita"],
+            "tipoBersaglio" => $cyberattacco["tipoBersaglio"],
+            "livelloImpatto" => $cyberattacco["livelloImpatto"],
+            "metodoAttacco" => $cyberattacco["metodoAttacco"],
+            "tecnicaId" => $tecnica["tecnicaId"],
+            "nomeTecnica" => $tecnica["nomeTecnica"],
+            "descrizioneTecnica" => $tecnica["descrizioneTecnica"],
+            "tattiche" => $tecnica["tattiche"],
+            "contromisure" => $tecnica["contromisure"],
+            "urlMitre" => $tecnica["urlMitre"],
+            "fonte" => $tecnica["fonte"]
+        ];
+    }
+
+    return $risultati;
 }

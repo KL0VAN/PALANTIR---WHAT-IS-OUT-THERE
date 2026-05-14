@@ -35,12 +35,8 @@ async function caricaDatiIniziali() {
 }
 
 /*
-    Questa funzione carica i coinvolgimenti.
-    Il file PHP fa già il lavoro distribuito:
-
-    DB locale → coinvolgimento
-    DB remoto → paese
-    PHP → JSON finale
+    Questa funzione carica i coinvolgimenti dal DB locale.
+    Il PHP unisce coinvolgimento e Paese senza usare database esterni.
 */
 async function caricaCoinvolgimenti() {
     try {
@@ -1075,7 +1071,8 @@ function creaRischioPaesi() {
             return;
         }
 
-        const codice = codicePaeseDaNome(coinvolgimento.nomePaese);
+        const codice = normalizzaCodicePaese(coinvolgimento.codicePaese)
+            || codicePaeseDaNome(coinvolgimento.nomePaese);
 
         if (!codice) {
             return;
@@ -1116,12 +1113,6 @@ function creaRischioPaesi() {
             livello
         });
     });
-
-    if (rischio.size === 0) {
-        datiRischioFallback().forEach(paese => {
-            rischio.set(paese.codice, paese);
-        });
-    }
 
     return Array.from(rischio.values()).sort((a, b) => {
         const diff = pesoLivelloRischio(b.livello) - pesoLivelloRischio(a.livello);
@@ -1248,6 +1239,12 @@ function formattaCoordinata(coordinata) {
     return valore.toFixed(4);
 }
 
+function normalizzaCodicePaese(codicePaese) {
+    const codice = String(codicePaese || "").trim().toUpperCase();
+
+    return /^[A-Z]{2}$/.test(codice) ? codice : null;
+}
+
 function codicePaeseDaNome(nomePaese) {
     if (!nomePaese) {
         return null;
@@ -1345,47 +1342,6 @@ function classeLivelloRischio(livello) {
     };
 
     return classi[normalizzaLivelloRischio(livello)] || "medium";
-}
-
-function datiRischioFallback() {
-    return [
-        {
-            codice: "IR",
-            nome: "Iran",
-            livello: "critico",
-            vittime: 120,
-            eventi: [{ luogo: "Iran", tipologia: "Militare/Cyber", fonte: "Fallback locale", statoEvento: "critico", latitudine: 35.6892, longitudine: 51.3890 }],
-            ruoli: new Set(["Area critica"]),
-            aree: new Set(["Medio Oriente"])
-        },
-        {
-            codice: "IL",
-            nome: "Israele",
-            livello: "critico",
-            vittime: 85,
-            eventi: [{ luogo: "Israele", tipologia: "Militare/Cyber", fonte: "Fallback locale", statoEvento: "critico", latitudine: 31.7683, longitudine: 35.2137 }],
-            ruoli: new Set(["Area critica"]),
-            aree: new Set(["Medio Oriente"])
-        },
-        {
-            codice: "SY",
-            nome: "Siria",
-            livello: "alto",
-            vittime: 45,
-            eventi: [{ luogo: "Siria", tipologia: "Umanitaria", fonte: "Fallback locale", statoEvento: "alto", latitudine: 33.5138, longitudine: 36.2765 }],
-            ruoli: new Set(["Crisi umanitaria"]),
-            aree: new Set(["Medio Oriente"])
-        },
-        {
-            codice: "UA",
-            nome: "Ucraina",
-            livello: "alto",
-            vittime: 40,
-            eventi: [{ luogo: "Ucraina", tipologia: "Militare", fonte: "Fallback locale", statoEvento: "alto", latitudine: 50.4501, longitudine: 30.5234 }],
-            ruoli: new Set(["Conflitto attivo"]),
-            aree: new Set(["Europa orientale"])
-        }
-    ];
 }
 
 function escapeHtml(value) {

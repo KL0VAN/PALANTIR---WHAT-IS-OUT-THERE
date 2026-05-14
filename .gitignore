@@ -1,24 +1,63 @@
+# Environment and local secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.crt
+*.p12
 
+# Local PHP configuration files
 config.php
 config.local.php
+*.local.php
 database.php
 db.php
+api/db.php
+api/db_remoto.php
 credentials.php
 secrets.php
 
-*.log
-*.sql
-*.sqlite
-*.db
-
+# Dependencies
 vendor/
 node_modules/
+composer.phar
 
+# Local databases and dumps
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sql
+
+# If a specific seed database must stay versioned, add an exception like:
+# !database/seed.sqlite3
+
+# Logs, cache, and temporary files
+*.log
+logs/
+log/
+cache/
+tmp/
+temp/
+storage/cache/
+storage/logs/
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+
+# IDE and editor files
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
 
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini

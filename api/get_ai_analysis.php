@@ -13,7 +13,7 @@ if ($prompt === '') {
     exit;
 }
 
-if ($apiKey === '' || $apiKey === 'your_openrouter_api_key_here') {
+if ($apiKey === '' || $apiKey === 'your_openrouter_api_key_here' || $apiKey === 'YOUR_OPENROUTER_API_KEY') {
     echo json_encode([
         'success' => false,
         'errore' => 'Chiave OpenRouter non configurata nel backend PHP.'
@@ -23,12 +23,10 @@ if ($apiKey === '' || $apiKey === 'your_openrouter_api_key_here') {
 
 $payload = [
     'model' => $model,
-    'max_tokens' => 700,
-    'temperature' => 0.3,
     'messages' => [
         [
             'role' => 'system',
-            'content' => 'You are an intelligence analyst for a crisis dashboard. Provide a concise structured analysis with: summary, key risks, cyber angle if relevant, humanitarian impact, and short outlook. Do not reveal hidden reasoning.'
+            'content' => 'You are an intelligence analyst for a crisis dashboard. Provide concise, structured geopolitical, cyber, humanitarian, and travel-risk analysis. Do not reveal hidden reasoning.'
         ],
         [
             'role' => 'user',
@@ -46,7 +44,7 @@ curl_setopt_array($ch, [
         'Content-Type: application/json'
     ],
     CURLOPT_POSTFIELDS => json_encode($payload),
-    CURLOPT_TIMEOUT => 90,
+    CURLOPT_TIMEOUT => 30,
     CURLOPT_CONNECTTIMEOUT => 10
 ]);
 
