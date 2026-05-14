@@ -2,109 +2,127 @@
 
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once "db.php";          // DB locale tuo
-require_once "db_remoto.php";   // DB remoto del compagno
+require_once "db.php";
 
 try {
-    /*
-        1. Prendo i coinvolgimenti dal DB locale.
-        Qui ci sono:
-        - idEvento
-        - idPaese
-        - ruoloNelEvento
-    */
+    $tabellaPaesi = trovaTabellaPaesi($conn);
+    $colonnePaese = colonneTabella($conn, $tabellaPaesi);
 
-    $sqlCoinvolgimenti = "
-        SELECT 
-            idEvento,
-            idPaese,
-            ruoloNelEvento
-        FROM coinvolgimento
-        ORDER BY idEvento ASC
+    $colonnaNome = primaColonnaDisponibile($colonnePaese, [
+        "nome",
+        "nomePaese",
+        "name"
+    ]);
+
+    if ($colonnaNome === null) {
+        throw new RuntimeException("La tabella $tabellaPaesi non contiene una colonna nome/nomePaese/name.");
+    }
+
+    $sql = "
+        SELECT
+            c.idEvento,
+            c.idPaese,
+            c.ruoloNelEvento,
+            " . colonnaSql($colonnaNome, "nomePaese") . ",
+            " . colonnaOpzionaleSql($colonnePaese, [
+                "codicePaese",
+                "codiceISO",
+                "codiceIso",
+                "codice_iso",
+                "iso2",
+                "iso_2",
+                "cca2",
+                "alpha2",
+                "codiceAlpha2"
+            ], "codicePaese") . ",
+            " . colonnaOpzionaleSql($colonnePaese, [
+                "areaGeografica",
+                "area_geografica",
+                "area"
+            ], "areaGeografica") . ",
+            " . colonnaOpzionaleSql($colonnePaese, [
+                "alleanza",
+                "alliance"
+            ], "alleanza") . ",
+            " . colonnaOpzionaleSql($colonnePaese, [
+                "ruolo",
+                "ruoloConflitto"
+            ], "ruoloConflitto") . "
+        FROM coinvolgimento c
+        INNER JOIN " . quoteIdentificatore($tabellaPaesi) . " p ON c.idPaese = p.idPaese
+        ORDER BY c.idEvento ASC, c.idPaese ASC
     ";
 
-    $stmt = $conn->prepare($sqlCoinvolgimenti);
+    $stmt = $conn->prepare($sql);
     $stmt->execute();
 
     $coinvolgimenti = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (count($coinvolgimenti) === 0) {
-        echo json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    /*
-        2. Estraggo tutti gli idPaese presenti nella tabella Coinvolgimento.
-    */
-
-    $idPaesi = [];
-
-    foreach ($coinvolgimenti as $coinvolgimento) {
-        $idPaesi[] = (int)$coinvolgimento["idPaese"];
-    }
-
-    $idPaesi = array_values(array_unique($idPaesi));
-
-    /*
-        3. Recupero dal DB remoto i dati dei Paesi.
-    */
-
-    $placeholders = implode(",", array_fill(0, count($idPaesi), "?"));
-
-    $sqlPaesi = "
-        SELECT 
-            idPaese,
-            nome,
-            areaGeografica,
-            alleanza,
-            ruolo
-        FROM Paese
-        WHERE idPaese IN ($placeholders)
-    ";
-
-    $stmtPaesi = $connRemoto->prepare($sqlPaesi);
-    $stmtPaesi->execute($idPaesi);
-
-    $paesi = $stmtPaesi->fetchAll(PDO::FETCH_ASSOC);
-
-    /*
-        4. Creo una mappa:
-        idPaese → dati completi del Paese
-    */
-
-    $mappaPaesi = [];
-
-    foreach ($paesi as $paese) {
-        $mappaPaesi[(int)$paese["idPaese"]] = $paese;
-    }
-
-    /*
-        5. Unisco i dati locali con quelli remoti.
-    */
-
-    foreach ($coinvolgimenti as &$coinvolgimento) {
-        $idPaese = (int)$coinvolgimento["idPaese"];
-
-        if (isset($mappaPaesi[$idPaese])) {
-            $coinvolgimento["nomePaese"] = $mappaPaesi[$idPaese]["nome"];
-            $coinvolgimento["areaGeografica"] = $mappaPaesi[$idPaese]["areaGeografica"];
-            $coinvolgimento["alleanza"] = $mappaPaesi[$idPaese]["alleanza"];
-            $coinvolgimento["ruoloConflitto"] = $mappaPaesi[$idPaese]["ruolo"];
-        } else {
-            $coinvolgimento["nomePaese"] = "Paese non trovato";
-            $coinvolgimento["areaGeografica"] = null;
-            $coinvolgimento["alleanza"] = null;
-            $coinvolgimento["ruoloConflitto"] = null;
-        }
-    }
-
     echo json_encode($coinvolgimenti, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
 
     echo json_encode([
         "errore" => "Errore nel recupero dei coinvolgimenti",
         "dettaglio" => $e->getMessage()
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+
+function trovaTabellaPaesi(PDO $conn) {
+    $tabelle = $conn->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+    $candidate = ["Paese", "paese", "Paesi", "paesi"];
+
+    foreach ($candidate as $nomeTabella) {
+        if (in_array($nomeTabella, $tabelle, true)) {
+            return $nomeTabella;
+        }
+    }
+
+    foreach ($tabelle as $nomeTabella) {
+        if (strcasecmp($nomeTabella, "paese") === 0 || strcasecmp($nomeTabella, "paesi") === 0) {
+            return $nomeTabella;
+        }
+    }
+
+    throw new RuntimeException("Tabella Paese/paese non trovata nel database locale.");
+}
+
+function colonneTabella(PDO $conn, $tabella) {
+    $stmt = $conn->query("SHOW COLUMNS FROM " . quoteIdentificatore($tabella));
+    $colonne = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return array_map(function ($colonna) {
+        return $colonna["Field"];
+    }, $colonne);
+}
+
+function primaColonnaDisponibile(array $colonne, array $candidate) {
+    foreach ($candidate as $candidata) {
+        foreach ($colonne as $colonna) {
+            if (strcasecmp($colonna, $candidata) === 0) {
+                return $colonna;
+            }
+        }
+    }
+
+    return null;
+}
+
+function colonnaOpzionaleSql(array $colonne, array $candidate, $alias) {
+    $colonna = primaColonnaDisponibile($colonne, $candidate);
+
+    if ($colonna === null) {
+        return "NULL AS " . quoteIdentificatore($alias);
+    }
+
+    return colonnaSql($colonna, $alias);
+}
+
+function colonnaSql($colonna, $alias) {
+    return "p." . quoteIdentificatore($colonna) . " AS " . quoteIdentificatore($alias);
+}
+
+function quoteIdentificatore($identificatore) {
+    return "`" . str_replace("`", "``", $identificatore) . "`";
 }
